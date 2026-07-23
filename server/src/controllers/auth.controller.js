@@ -20,7 +20,7 @@ async function registerUser(req, res) {
       profilePic: uploadedPic?.url
     });
 
-    res.cookie("token", token);
+    res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "none" });
     res.status(201).json({
       message: "User Registered Successfully",
       user,
@@ -46,7 +46,7 @@ async function loginUser(req, res) {
       req.userExist,
     );
 
-    res.cookie("token", token);
+    res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "none" });
 
     const user = {
       _id: req.userExist._id,
@@ -73,7 +73,7 @@ async function loginUser(req, res) {
 
 // ------------- USER LOGOUT API CONTROLLER -------------- //
 async function logoutUser(req, res) {
-  res.clearCookie("token");
+  res.clearCookie("token", { httpOnly: true, secure: true, sameSite: "none" });
   res.status(200).json({
     message: "User logged out successfully",
   });

@@ -1,11 +1,37 @@
 // This file serves as the API integration layer.
-// It currently provides mock implementations. Use the '// NOTE -' markers to wire up your backend routing.
+
+const BASE_URL = import.meta.env.VITE_API_URL || "";
+
+/**
+ * Centered fetch wrapper that appends VITE_API_URL, enforces CORS credentials inclusion,
+ * and handles HTML/JSON errors gracefully before parsing.
+ */
+const apiFetch = async (endpoint, options = {}) => {
+  const url = `${BASE_URL}${endpoint}`;
+  options.credentials = "include";
+  const response = await fetch(url, options);
+  
+  if (!response.ok) {
+    let errMsg = `Request failed with status ${response.status}`;
+    try {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        errMsg = data.message || errMsg;
+      }
+    } catch (e) {
+      // ignore parsing error
+    }
+    throw new Error(errMsg);
+  }
+  return response;
+};
 
 /**
  * Fetch all posts from feed
  */
 export const getPosts = async () => {
-  const response = await fetch('/api/content/feed');
+  const response = await apiFetch('/api/content/feed');
   return await response.json();
 };
 
@@ -19,7 +45,7 @@ export const createPostApi = async (caption, imageFile) => {
   formData.append("image", imageFile);
   formData.append("caption", caption);
 
-  const response = await fetch('/api/content/post', {
+  const response = await apiFetch('/api/content/post', {
     method: 'POST',
     body: formData
   });
@@ -32,7 +58,7 @@ export const createPostApi = async (caption, imageFile) => {
  * @param {string} postId 
  */
 export const toggleLikePostApi = async (postId) => {
-  const response = await fetch(`/api/content/${postId}/like`, { method: 'POST' });
+  const response = await apiFetch(`/api/content/${postId}/like`, { method: 'POST' });
   return await response.json();
 };
 
@@ -42,7 +68,7 @@ export const toggleLikePostApi = async (postId) => {
  * @param {string} comment - The comment text
  */
 export const createCommentApi = async (postId, comment) => {
-  const response = await fetch(`/api/comments/${postId}/comment`, {
+  const response = await apiFetch(`/api/comments/${postId}/comment`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ comment })
@@ -57,7 +83,7 @@ export const createCommentApi = async (postId, comment) => {
  * @param {string} comment - The reply comment text
  */
 export const createReplyCommentApi = async (postId, commentId, comment) => {
-  const response = await fetch(`/api/comments/${postId}/reply/${commentId}`, {
+  const response = await apiFetch(`/api/comments/${postId}/reply/${commentId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ comment })
@@ -70,7 +96,7 @@ export const createReplyCommentApi = async (postId, commentId, comment) => {
  * @param {string} postId 
  */
 export const deletePostApi = async (postId) => {
-  const response = await fetch(`/api/content/${postId}`, { method: 'DELETE' });
+  const response = await apiFetch(`/api/content/${postId}`, { method: 'DELETE' });
   return await response.json();
 };
 
@@ -88,7 +114,7 @@ export const updateProfileApi = async (bio, displayName, profilePicFile) => {
     formData.append('profilePic', profilePicFile);
   }
 
-  const response = await fetch('/api/user/update', {
+  const response = await apiFetch('/api/user/update', {
     method: 'PUT',
     body: formData
   });
@@ -102,15 +128,12 @@ export const updateProfileApi = async (bio, displayName, profilePicFile) => {
  * @param {string} password - The password of the user
  */
 export const loginAPI = async (username, password) => {
-  const response = await fetch(`/api/auth/login`, {
+  const response = await apiFetch(`/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password })
   });
   const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || "Login failed");
-  }
   // Store token in localStorage to maintain user session
   localStorage.setItem('token', data.token);
   return data;
@@ -133,14 +156,11 @@ export const registerAPI = async (username, password, email, displayName, profil
   formData.append("displayName", displayName);
   formData.append("profilePic", profilePicFile);
 
-  const response = await fetch(`/api/auth/register`, {
+  const response = await apiFetch(`/api/auth/register`, {
     method: 'POST',
     body: formData
   });
   const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || "Registration failed");
-  }
   return data;
 };
 
@@ -148,11 +168,8 @@ export const registerAPI = async (username, password, email, displayName, profil
  * Fetch currently logged-in user profile from active session cookie
  */
 export const getMeAPI = async () => {
-  const response = await fetch('/api/auth/me');
+  const response = await apiFetch('/api/auth/me');
   const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || "Session verification failed");
-  }
   return data;
 };
 
@@ -160,11 +177,8 @@ export const getMeAPI = async () => {
  * Logout the currently logged-in user session
  */
 export const logoutAPI = async () => {
-  const response = await fetch('/api/auth/logout', { method: 'POST' });
+  const response = await apiFetch('/api/auth/logout', { method: 'POST' });
   const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || "Logout failed");
-  }
   return data;
 };
 
@@ -172,11 +186,8 @@ export const logoutAPI = async () => {
  * Fetch all registered users from the database
  */
 export const getUsersAPI = async () => {
-  const response = await fetch('/api/data/users');
+  const response = await apiFetch('/api/data/users');
   const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || "Failed to fetch users");
-  }
   return data;
 };
 
@@ -184,10 +195,7 @@ export const getUsersAPI = async () => {
  * Fetch a single post's details (including populated comments) from the database
  */
 export const getPostDetailsAPI = async (postId) => {
-  const response = await fetch(`/api/content/${postId}`);
+  const response = await apiFetch(`/api/content/${postId}`);
   const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || "Failed to fetch post details");
-  }
   return data;
 };
