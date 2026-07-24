@@ -5,7 +5,13 @@ let io;
 const initializeSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:5173",
+      origin: (origin, callback) => {
+        if (!origin || origin.endsWith(".vercel.app") || origin === "http://localhost:5173" || origin === process.env.CLIENT_URL) {
+          callback(null, true);
+        } else {
+          callback(null, true);
+        }
+      },
       methods: ["GET", "POST"]
     }
   });

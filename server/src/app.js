@@ -9,8 +9,23 @@ const dataRoutes = require("./routes/data.routes");
 
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://snapix-social.vercel.app"
+];
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:5173",
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const isAllowed = allowedOrigins.includes(origin) || 
+                      origin.endsWith(".vercel.app") || 
+                      origin === process.env.CLIENT_URL;
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Fallback to accept all requests in case of debug
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
